@@ -1,0 +1,186 @@
+Assignment B1
+================
+Jessica Chalissery
+2023-10-26
+
+# Welcome!
+
+This is my assignment B1 which is focused on learning how to write a
+function. The function I made is something that would have been useful
+to use during the mini data analysis projects we had to complete during
+STAT545A when I was looking into the *vancouver_trees* dataset from the
+*datateachr* package. This function is documented using *roxygen2*
+formatting.
+
+### Packages Needed
+
+Here are the packages you will need to load in order to use this
+function and run the examples/tests.
+
+``` r
+library(datateachr)
+library(dplyr)
+```
+
+    ## 
+    ## Attaching package: 'dplyr'
+
+    ## The following objects are masked from 'package:stats':
+    ## 
+    ##     filter, lag
+
+    ## The following objects are masked from 'package:base':
+    ## 
+    ##     intersect, setdiff, setequal, union
+
+``` r
+library(roxygen2)
+library(palmerpenguins)
+library(testthat)
+```
+
+    ## 
+    ## Attaching package: 'testthat'
+
+    ## The following object is masked from 'package:dplyr':
+    ## 
+    ##     matches
+
+### Function
+
+I chose to name this function *average_values_by_group*, since it takes
+the average value of each group in a dataset. This is a function that is
+quite versatile. It can take different individual datasets and separate
+it into groups based on a column of your choosing, and then find the
+mean value of a chosen measure (another column) for each group. The
+column chosen for the measure must have numeric values. Note that this
+function ignores NA values from the column chosen for the measure
+parameter so that it can calculate the mean.
+
+``` r
+#' @title Average Values By Group Function
+#' 
+#' @description This function takes a dataset and groups it by a chosen variable, then finds the mean value of a chosen measure for each group. 
+#' 
+#' @param dataset is the parameter for the **dataset** you are inputting into the function.
+#' @param group is the parameter for the variable you choose to **group** the dataset by. This variable should be a column name from the dataset. 
+#' @param measure is the parameter for the **measure** you choose to find the mean value of for each of the groups. The column you choose for the measure parameter must have numeric values. 
+#' 
+#' @return This function returns a dataframe with each *group* in the first column, and the *mean value of the measure for each group* in the second column. 
+
+
+average_values_by_group <- function(dataset, group, measure) {
+  var <- dataset %>% pull({{measure}}) %>% is.numeric()
+  if(!var) {
+    stop("The 'measure' parameter must have numeric values.")
+  }
+  dataset %>% group_by({{group}}) %>% summarize(average = mean({{measure}}, na.rm = TRUE))
+}
+```
+
+### Examples
+
+Here I will demonstrate how to use the function - it is quite versatile!
+
+``` r
+#' @examples These are examples showing that this function works with multiple dataset, variable and measure inputs.
+
+average_values_by_group(vancouver_trees, genus_name, diameter)
+```
+
+    ## # A tibble: 97 × 2
+    ##    genus_name  average
+    ##    <chr>         <dbl>
+    ##  1 ABIES         12.9 
+    ##  2 ACER          10.6 
+    ##  3 AESCULUS      23.7 
+    ##  4 AILANTHUS     15.9 
+    ##  5 ALBIZIA        6   
+    ##  6 ALNUS         17.5 
+    ##  7 AMELANCHIER    3.21
+    ##  8 ARALIA         6.81
+    ##  9 ARAUCARIA     11.4 
+    ## 10 ARBUTUS       18.4 
+    ## # ℹ 87 more rows
+
+``` r
+average_values_by_group(vancouver_trees, species_name, latitude) 
+```
+
+    ## # A tibble: 283 × 2
+    ##    species_name   average
+    ##    <chr>            <dbl>
+    ##  1 ABIES             49.2
+    ##  2 ACERIFOLIA   X    49.2
+    ##  3 ACUMINATA         49.2
+    ##  4 ACUTISSIMA        49.2
+    ##  5 AILANTHIFOLIA     49.3
+    ##  6 ALBA              49.2
+    ##  7 ALBA-SINENSIS     49.2
+    ##  8 ALNIFOLIA         49.3
+    ##  9 ALPINUM           49.3
+    ## 10 ALTISSIMA         49.2
+    ## # ℹ 273 more rows
+
+``` r
+average_values_by_group(penguins, island, bill_length_mm)
+```
+
+    ## # A tibble: 3 × 2
+    ##   island    average
+    ##   <fct>       <dbl>
+    ## 1 Biscoe       45.3
+    ## 2 Dream        44.2
+    ## 3 Torgersen    39.0
+
+### Testing
+
+Here I will be testing whether the function works in specific
+situations.
+
+The first test will check whether this function works when the measure
+has no NA values. In this case, we are checking that we can compare two
+values from the dataframe and pass the test.
+
+``` r
+test_that("Test if this function works when the measure has no NA values", {
+  sample_data1 <- data.frame(Group = c("A", "A", "B", "B", "B"), Value = c(10, 20, 30, 40, 50))
+  result <- average_values_by_group(sample_data1, Group, Value)
+  expect_gt(result$average[2], result$average[1])
+})
+```
+
+    ## Test passed 😀
+
+The second test checks whether this function works when the measure has
+NA values. This function should ignore NA values in order to calculate
+the mean. Similar to the previous test, we are checking that we can
+compare two values from the dataframe and pass the test, even with NA
+values present.
+
+``` r
+test_that("Test if this function works when the measure has NA values", {
+  sample_data2 <- data.frame(Group = c("A", "A", "B", "B", "B"), Value = c(10, 20, NA, 40, 50))
+  result <- average_values_by_group(sample_data2, Group, Value)
+  expect_lt(result$average[1], result$average[2])
+})
+```
+
+    ## Test passed 🎉
+
+The third test checks whether this function works when the measure has
+string values instead of numeric values. Since our function should only
+work when the measure parameter has numeric values, we are checking to
+make sure that when there are non-numeric values in the measure
+parameter, it gives the appropriate error message.
+
+``` r
+test_that("Test if this function works when the measure has no values", {
+  sample_data3 <- data.frame(Group = c("A", "A", "B", "B", "B"), Value = c("one", "two", "three", "four", "five"))
+  expect_error(average_values_by_group(sample_data3, Group, Value), "The 'measure' parameter must have numeric values.")
+})
+```
+
+    ## Test passed 🎉
+
+Hooray! The tests passed! We succeeded :)
